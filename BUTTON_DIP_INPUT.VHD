@@ -5,11 +5,11 @@ USE IEEE.STD_LOGIC_1164.ALL;
 
 ENTITY BUTTON_DIP_INPUT IS
 PORT (
-    RESETN : IN STD_LOGIC;                         -- RESET
-    BTN    : IN STD_LOGIC_VECTOR(3 DOWNTO 0);     -- FUNCTION BUTTONS
-    DIP    : IN STD_LOGIC_VECTOR(3 DOWNTO 0);     -- BUS DIP SWITCH INPUT
+    RESETN : IN STD_LOGIC;                          -- RESET
+    BTN    : IN STD_LOGIC_VECTOR(15 DOWNTO 0);     -- BUTTON_SW1 ~ SWF
+    DIP    : IN STD_LOGIC_VECTOR(7 DOWNTO 0);      -- BUS_SW1 ~ SW8
 
-    LED_OUT : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)    -- LED OUTPUT
+    LED_OUT : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)     -- LED OUTPUT
 );
 END BUTTON_DIP_INPUT;
 
@@ -21,9 +21,14 @@ BEGIN
     IF RESETN = '0' THEN
         LED_OUT <= "00000000";
     ELSE
-        -- Upper 4 LEDs show button input, lower 4 LEDs show DIP input.
-        LED_OUT(7 DOWNTO 4) <= BTN;
-        LED_OUT(3 DOWNTO 0) <= DIP;
+        -- LED7~LED4 indicate whether each group of 4 buttons is active.
+        LED_OUT(7) <= BTN(15) OR BTN(14) OR BTN(13) OR BTN(12);
+        LED_OUT(6) <= BTN(11) OR BTN(10) OR BTN(9) OR BTN(8);
+        LED_OUT(5) <= BTN(7) OR BTN(6) OR BTN(5) OR BTN(4);
+        LED_OUT(4) <= BTN(3) OR BTN(2) OR BTN(1) OR BTN(0);
+
+        -- LED3~LED0 display the lower 4-bit DIP switch state.
+        LED_OUT(3 DOWNTO 0) <= DIP(3 DOWNTO 0);
     END IF;
 END PROCESS;
 
