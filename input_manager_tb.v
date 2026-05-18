@@ -16,7 +16,7 @@ module input_manager_tb;
     wire [15:0] pass_buffer;
 
     input_manager #(
-        .CLK_FREQ_HZ(50000000),
+        .CLK_FREQ_HZ(1000000),
         .DEBOUNCE_MS(20)
     ) dut (
         .clk(clk),

@@ -1,5 +1,5 @@
 module input_manager #(
-    parameter integer CLK_FREQ_HZ = 50000000,
+    parameter integer CLK_FREQ_HZ = 1000000,
     parameter integer DEBOUNCE_MS = 20
 ) (
     input  wire        clk,

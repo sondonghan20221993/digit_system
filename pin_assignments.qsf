@@ -1,4 +1,4 @@
-set_location_assignment PIN_131 -to clk
+set_location_assignment PIN_132 -to clk
 set_location_assignment PIN_206 -to reset_n
 
 set_location_assignment PIN_110 -to button_in[0]
