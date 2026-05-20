@@ -16,6 +16,8 @@ module key_encoder (
         clear_key  = 1'b0;
         inside_unlock_btn = 1'b0;
 
+        // Button map: 0~9 = number keys, 10 = #, 11 = admin(A),
+        // 12 = clear, 13 = inside unlock.
         case (key_in)
             16'b0000_0000_0000_0001: begin key_valid = 1'b1; key_data = 4'd0; end
             16'b0000_0000_0000_0010: begin key_valid = 1'b1; key_data = 4'd1; end
