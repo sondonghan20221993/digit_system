@@ -12,6 +12,7 @@ module input_manager_tb;
     wire        hash_key;
     wire        admin_key;
     wire        clear_key;
+    wire        inside_unlock_btn;
     wire [2:0]  input_count;
     wire [15:0] pass_buffer;
 
@@ -27,6 +28,7 @@ module input_manager_tb;
         .hash_key(hash_key),
         .admin_key(admin_key),
         .clear_key(clear_key),
+        .inside_unlock_btn(inside_unlock_btn),
         .input_count(input_count),
         .pass_buffer(pass_buffer)
     );
@@ -70,6 +72,11 @@ module input_manager_tb;
         button_in[12] = 1'b1;
         #30_000_000;
         button_in[12] = 1'b0;
+        #30_000_000;
+
+        button_in[13] = 1'b1;
+        #30_000_000;
+        button_in[13] = 1'b0;
         #30_000_000;
 
         $finish;

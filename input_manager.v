@@ -10,6 +10,7 @@ module input_manager #(
     output wire        hash_key,
     output wire        admin_key,
     output wire        clear_key,
+    output wire        inside_unlock_btn,
     output wire [2:0]  input_count,
     output wire [15:0] pass_buffer
 );
@@ -39,7 +40,8 @@ module input_manager #(
         .key_data(key_data),
         .hash_key(hash_key),
         .admin_key(admin_key),
-        .clear_key(clear_key)
+        .clear_key(clear_key),
+        .inside_unlock_btn(inside_unlock_btn)
     );
 
     input_buffer u_input_buffer (
