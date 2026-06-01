@@ -1,92 +1,107 @@
-# 입력부 구조 정리
+# 디지털 도어락 FSM 프로젝트
 
-이 문서는 디지털 도어락 프로젝트에서 입력 담당 모듈의 구조와 키 매핑을 정리한 문서입니다.
+FPGA 기반 비밀번호 잠금 장치 — Cyclone II (EP2C8Q208C8) / Quartus II 13.0 SP1
+
+> 명세서 기준: `도어락_FSM_명세서_v2.pdf`
+
+---
 
 ## 모듈 구조
 
-```text
-top
-+-- input_manager
-    +-- button_debounce
-    +-- key_encoder
-    +-- input_buffer
+```
+TACT_SW[12:0]
+    └── top_module (키 디코딩)
+            └── fsm_module (메인 FSM)
+                    ├── unlock_on / alarm_on
+                    ├── key_led / state[2:0]
+                    └── input_count_led[3:0]
+                            └── LEDR[7:0]
 ```
 
-## 입력 신호 흐름
+---
 
-```text
-button_in[15:0]
--> button_debounce
--> btn_pulse[15:0]
--> key_encoder
--> key_valid, key_data, hash_key, admin_key, clear_key, inside_unlock_btn
--> input_buffer
--> input_count, pass_buffer
+## 파일 목록
+
+| 파일 | 설명 |
+|---|---|
+| `top_module.v` | 최상위 모듈 — TACT_SW 디코딩 후 FSM 연결 |
+| `fsm_module.v` | 메인 FSM (6-state) |
+| `fsm_module_tb.v` | FSM 시뮬레이션 테스트벤치 |
+| `input_manager.qsf` | Quartus 프로젝트 설정 및 핀 배정 |
+
+---
+
+## 포트 인터페이스 (top_module)
+
+| 포트 | 방향 | 비트 | 설명 |
+|---|---|---|---|
+| `clk_1khz` | in | 1 | 1 kHz 시스템 클럭 |
+| `rst` | in | 1 | 비동기 리셋 (active-high) — ALARM 해제 유일 경로 |
+| `TACT_SW[12:0]` | in | 13 | 택트 스위치 입력 |
+| `LEDR[7:0]` | out | 8 | 상태 표시 LED |
+
+---
+
+## 스위치 매핑 (TACT_SW)
+
+| 스위치 | 신호 | 역할 |
+|---|---|---|
+| `TACT_SW[0]~[9]` | `digit_in` / `key_valid` | 숫자 0~9 (우선순위: 낮은 번호 우선) |
+| `TACT_SW[10]` | `enter` | 입력 완료 / 확정 |
+| `TACT_SW[11]` | `change` | 비밀번호 변경 모드 (UNLOCK 상태에서만 유효) |
+| `TACT_SW[12]` | `auto_open` | 내부 버튼 — 즉시 잠금 해제 |
+
+---
+
+## LED 매핑 (LEDR)
+
+| LED | 신호 | 의미 |
+|---|---|---|
+| `LEDR[3:0]` | `input_count_led` | 입력 자릿수 (온도계: 0001→0011→0111→1111) |
+| `LEDR[4]` | `key_led` | 키 입력 시 1클럭 펄스 |
+| `LEDR[5]` | `unlock_on` | 잠금 해제 표시 |
+| `LEDR[6]` | `alarm_on` | 경보 표시 |
+| `LEDR[7]` | `auto_open` | 내부 버튼 입력 표시 |
+
+---
+
+## FSM 상태 (6-state · 3-bit)
+
+| 상태 | 인코딩 | 설명 |
+|---|---|---|
+| `IDLE` | 3'd0 | 대기 — 숫자 키 또는 auto_open 대기 |
+| `INPUT` | 3'd1 | 비밀번호 입력 중 |
+| `CHECK` | 3'd2 | 입력값 비교 (1클럭 경유) |
+| `UNLOCK` | 3'd3 | 잠금 해제 — enter=재잠금, change=변경모드 |
+| `ALARM` | 3'd4 | 3회 실패 시 진입 — rst로만 해제 |
+| `CHANGE` | 3'd5 | 새 비밀번호 입력 — enter 시 즉시 저장 후 IDLE |
+
+---
+
+## 주요 동작
+
+- **기본 비밀번호**: `1234` (전원 인가 시 initial 블록으로 보장, rst 시 재초기화)
+- **실패 정책**: 1·2회 실패 → IDLE 복귀, 3회째 → ALARM
+- **경보 해제**: `rst` 버튼만 가능 (PIN_206)
+- **비밀번호 변경**: UNLOCK 상태에서 `change` → 새 번호 입력 → `enter`
+- **자동 잠금**: 미구현 (UNLOCK에서 `enter`로 수동 재잠금)
+
+---
+
+## 핀 배정 요약
+
+| 신호 | PIN |
+|---|---|
+| `clk_1khz` | PIN_132 |
+| `rst` | PIN_206 |
+| `TACT_SW[0~12]` | PIN_110, 112~116, 101, 104, 103, 105~107, 95 |
+| `LEDR[0~7]` | PIN_63, 60, 58, 56, 48, 46, 44, 41 |
+
+---
+
+## 시뮬레이션 (iverilog)
+
+```bash
+iverilog -o fsm_tb.vvp fsm_module.v fsm_module_tb.v
+vvp fsm_tb.vvp
 ```
-
-## 키 매핑
-
-| 버튼 입력 | 역할 | 출력 신호 |
-| --- | --- | --- |
-| `button_in[0]` | 숫자 0 | `key_valid=1`, `key_data=0` |
-| `button_in[1]` | 숫자 1 | `key_valid=1`, `key_data=1` |
-| `button_in[2]` | 숫자 2 | `key_valid=1`, `key_data=2` |
-| `button_in[3]` | 숫자 3 | `key_valid=1`, `key_data=3` |
-| `button_in[4]` | 숫자 4 | `key_valid=1`, `key_data=4` |
-| `button_in[5]` | 숫자 5 | `key_valid=1`, `key_data=5` |
-| `button_in[6]` | 숫자 6 | `key_valid=1`, `key_data=6` |
-| `button_in[7]` | 숫자 7 | `key_valid=1`, `key_data=7` |
-| `button_in[8]` | 숫자 8 | `key_valid=1`, `key_data=8` |
-| `button_in[9]` | 숫자 9 | `key_valid=1`, `key_data=9` |
-| `button_in[10]` | # / 입력 완료 | `hash_key=1` |
-| `button_in[11]` | 관리자 모드 / A 버튼 | `admin_key=1` |
-| `button_in[12]` | 입력 초기화 | `clear_key=1` |
-| `button_in[13]` | 내부 잠금 해제 버튼 | `inside_unlock_btn=1` |
-| `button_in[14]` | 미사용 | 없음 |
-| `button_in[15]` | 미사용 | 없음 |
-
-## FSM으로 전달 가능한 신호
-
-입력부에서 도어락 FSM으로 넘길 수 있는 신호는 다음과 같습니다.
-
-| 신호명 | 비트 | 설명 |
-| --- | --- | --- |
-| `key_valid` | 1비트 | 키 입력이 발생했음을 알리는 펄스 신호 |
-| `key_data` | 4비트 | 입력된 숫자 값, 0~9 |
-| `hash_key` | 1비트 | # 버튼, 비밀번호 입력 완료 |
-| `admin_key` | 1비트 | 관리자 모드 진입 버튼 |
-| `inside_unlock_btn` | 1비트 | 내부에서 비밀번호 없이 잠금 해제하는 버튼 |
-| `input_count` | 3비트 | 현재 입력된 비밀번호 자리 수 |
-| `pass_buffer` | 16비트 | 현재까지 입력된 4자리 비밀번호 버퍼 |
-
-## clear_key 설명
-
-`clear_key`는 FSM 명세서에는 없는 신호입니다.
-하지만 기존 입력부에서 이미 검증된 기능이므로 유지합니다.
-
-역할은 `input_buffer` 내부에서 현재 입력된 값을 지우는 것입니다.
-
-```text
-clear_key=1
--> input_count 초기화
--> pass_buffer 초기화
-```
-
-## inside_unlock_btn 설명
-
-`inside_unlock_btn`은 명세서에 있는 입력 신호입니다.
-문 안쪽에서 누르는 잠금 해제 버튼 역할입니다.
-
-비밀번호 입력 없이 바로 잠금 해제를 요청하는 신호이며, 현재는 `button_in[13]`에 연결되어 있습니다.
-
-```text
-button_in[13]
--> inside_unlock_btn=1
-```
-
-## 정리
-
-- 기존 입력부 동작은 유지했습니다.
-- `clear_key`는 기존 입력 초기화 기능으로 그대로 둡니다.
-- `inside_unlock_btn`은 새 신호로 추가했습니다.
-- 현재 `inside_unlock_btn`은 `button_in[13]`에 배정되어 있습니다.
