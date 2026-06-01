@@ -27,7 +27,7 @@ module fsm_module_tb;
 
     always #500 clk = ~clk; // 1 kHz
 
-    // 1클럭 펄스 태스크
+    // single-clock pulse tasks
     task press_digit;
         input [3:0] d;
         begin
@@ -73,7 +73,7 @@ module fsm_module_tb;
         rst = 0;
         @(posedge clk); #1;
 
-        $display("=== [1] 정상 비밀번호 입력 (1234) → UNLOCK ===");
+        $display("=== [1] correct password (1234) -> UNLOCK ===");
         press_digit(4'd1);
         press_digit(4'd2);
         press_digit(4'd3);
@@ -82,11 +82,11 @@ module fsm_module_tb;
         #2; @(posedge clk);
         $display("state=%0d unlock_on=%b alarm_on=%b (expect UNLOCK=3, unlock=1)", state, unlock_on, alarm_on);
 
-        $display("=== [2] UNLOCK → enter → IDLE(재잠금) ===");
+        $display("=== [2] UNLOCK -> enter -> IDLE (re-lock) ===");
         press_enter;
         $display("state=%0d unlock_on=%b (expect IDLE=0, unlock=0)", state, unlock_on);
 
-        $display("=== [3] 틀린 비밀번호 3회 → ALARM ===");
+        $display("=== [3] wrong password 3 times -> ALARM ===");
         repeat (3) begin
             press_digit(4'd9); press_digit(4'd9); press_digit(4'd9); press_digit(4'd9);
             press_enter;
@@ -103,14 +103,14 @@ module fsm_module_tb;
         press_auto_open;
         $display("state=%0d unlock_on=%b (expect UNLOCK=3)", state, unlock_on);
 
-        $display("=== [6] UNLOCK → change → CHANGE, 새 비번 5678 입력 후 저장 ===");
+        $display("=== [6] UNLOCK -> change -> CHANGE, set new password 5678 ===");
         press_change;
         $display("state=%0d (expect CHANGE=5)", state);
         press_digit(4'd5); press_digit(4'd6); press_digit(4'd7); press_digit(4'd8);
         press_enter;
         $display("state=%0d unlock_on=%b (expect IDLE=0)", state, unlock_on);
 
-        $display("=== [7] 새 비번 5678로 로그인 ===");
+        $display("=== [7] login with new password 5678 ===");
         press_digit(4'd5); press_digit(4'd6); press_digit(4'd7); press_digit(4'd8);
         press_enter;
         #2; @(posedge clk);

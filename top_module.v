@@ -1,6 +1,6 @@
 module top_module (
     input  wire        clk_1khz,
-    input  wire        reset_n,     // active-low; PIN_206 버튼 누르면 0 → FSM rst=1
+    input  wire        reset_n,     // active-low; press PIN_206 pulls to 0, FSM sees rst=1
     input  wire [12:0] TACT_SW,
     output wire [7:0]  LEDR
 );
