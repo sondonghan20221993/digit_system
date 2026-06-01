@@ -27,6 +27,23 @@ module fsm_module (
 
     reg key_prev, enter_prev, change_prev, auto_open_prev;
 
+    // Power-on initialization for Quartus synthesis (no reset required at startup)
+    initial begin
+        state           = IDLE;
+        unlock_on       = 1'b0;
+        alarm_on        = 1'b0;
+        key_led         = 1'b0;
+        input_count_led = 4'b0000;
+        input_buffer    = 16'h0000;
+        saved_password  = 16'h1234;
+        digit_count     = 2'd0;
+        fail_count      = 2'd0;
+        key_prev        = 1'b0;
+        enter_prev      = 1'b0;
+        change_prev     = 1'b0;
+        auto_open_prev  = 1'b0;
+    end
+
     wire key_pulse       = key_valid & ~key_prev;
     wire enter_pulse     = enter     & ~enter_prev;
     wire change_pulse    = change    & ~change_prev;
