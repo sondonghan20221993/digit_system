@@ -1,9 +1,11 @@
 module top_module (
     input  wire        clk_1khz,
-    input  wire        rst,         // active-high; connect to physical reset button for ALARM release
+    input  wire        reset_n,     // active-low; PIN_206 버튼 누르면 0 → FSM rst=1
     input  wire [12:0] TACT_SW,
     output wire [7:0]  LEDR
 );
+
+    wire rst = ~reset_n;
 
     // Key encoding from TACT_SW (§1-1)
     wire        key_valid  = |TACT_SW[9:0];
