@@ -9,16 +9,17 @@ FPGA 기반 비밀번호 잠금 장치 — Cyclone II (EP2C8Q208C8) / Quartus II
 ## 모듈 구조
 
 ```
-TACT_SW[12:0]
-    └── top_module
-            ├── input_manager (디바운싱 + 입력 lock)
-            │       └── button_debounce × 13
-            ├── fsm_module (메인 FSM, 6-state)
-            │       ├── auto_lock_timer (UNLOCK 자동잠금)
-            │       └── auto_lock_timer (INPUT/CHANGE 타임아웃)
-            ├── fnd_team_adapter (FND 출력)
-            ├── led_controller (16-LED 출력)
-            └── piezo_alarm (경보음)
+USB 키보드
+    └── Arduino (USB Host Shield)
+            └── GPIO (HDR20 BR1~BR7)
+                    └── top_module
+                            ├── gpio_key_input (상승에지 감지 + 입력 lock)
+                            ├── fsm_module (메인 FSM, 6-state)
+                            │       ├── auto_lock_timer (UNLOCK 자동잠금)
+                            │       └── auto_lock_timer (INPUT/CHANGE 타임아웃)
+                            ├── fnd_team_adapter (FND 출력)
+                            ├── led_controller (16-LED 출력)
+                            └── piezo_alarm (경보음)
 ```
 
 ---
@@ -29,10 +30,10 @@ TACT_SW[12:0]
 |---|---|
 | `top_module.v` | 최상위 모듈 — 서브모듈 연결 및 blink 생성 |
 | `fsm_module.v` | 메인 FSM (6-state) + 타이머 |
-| `input_manager.v` | 디바운싱 + 입력 lock 게이팅 |
+| `gpio_key_input.v` | GPIO 상승에지 감지 + 입력 lock 게이팅 |
+| `input_manager.v` | (구) TACT_SW 디바운싱 — keyboard 브랜치에서 미사용 |
 | `button_debounce.v` | 단일 버튼 디바운서 |
 | `fsm_module_tb.v` | FSM 시뮬레이션 테스트벤치 |
-| `lock_tb.v` | 입력 lock 기능 검증 테스트벤치 |
 | `도어락_FSM_명세서_v2.pdf` | 팀 통합 명세서 |
 
 ---
@@ -43,7 +44,10 @@ TACT_SW[12:0]
 |---|---|---|---|
 | `clk_1khz` | in | 1 | 1 kHz 시스템 클럭 |
 | `RESET_N` | in | 1 | 비동기 리셋 (active-low) — ALARM 해제 유일 경로 |
-| `TACT_SW[12:0]` | in | 13 | 택트 스위치 입력 |
+| `gpio_d[3:0]` | in | 4 | 숫자 비트 (Arduino → HDR20 BR1~BR4) |
+| `gpio_valid` | in | 1 | 숫자 유효 펄스 (BR5) |
+| `gpio_enter` | in | 1 | 엔터 펄스 (BR6) |
+| `gpio_change` | in | 1 | 비밀번호 변경 펄스 (BR7) |
 | `LEDR[15:0]` | out | 16 | 상태 표시 LED |
 | `FND_SEG[7:0]` | out | 8 | FND 세그먼트 |
 | `FND_COM[3:0]` | out | 4 | FND 자리 선택 |
@@ -51,14 +55,20 @@ TACT_SW[12:0]
 
 ---
 
-## 스위치 매핑 (TACT_SW)
+## GPIO 매핑 (HDR20 ↔ Arduino)
 
-| 스위치 | 신호 | 역할 |
-|---|---|---|
-| `TACT_SW[0]~[9]` | `digit_in` / `key_valid` | 숫자 0~9 (우선순위: 낮은 번호 우선) |
-| `TACT_SW[10]` | `enter` | 입력 완료 / 확정 |
-| `TACT_SW[11]` | `change` | 비밀번호 변경 모드 (UNLOCK 상태에서만 유효) |
-| `TACT_SW[12]` | `auto_open` | 내부 버튼 — 즉시 잠금 해제 |
+| HDR20 | FPGA PIN | 신호 | Arduino 핀 | 역할 |
+|---|---|---|---|---|
+| BR1 | PIN_149 | `gpio_d[0]` | D2 | 숫자 비트0 |
+| BR2 | PIN_147 | `gpio_d[1]` | D3 | 숫자 비트1 |
+| BR3 | PIN_146 | `gpio_d[2]` | D4 | 숫자 비트2 |
+| BR4 | PIN_145 | `gpio_d[3]` | D5 | 숫자 비트3 |
+| BR5 | PIN_144 | `gpio_valid` | D6 | 숫자 유효 펄스 (50ms HIGH) |
+| BR6 | PIN_143 | `gpio_enter` | D7 | 엔터 펄스 (50ms HIGH) |
+| BR7 | PIN_142 | `gpio_change` | D8 | 변경 펄스 (50ms HIGH) |
+| GND | GND | — | GND | 공통 접지 |
+
+> Arduino TX 5V → FPGA 3.3V I/O : 1kΩ + 2kΩ 분압 저항 필요
 
 ---
 
@@ -93,7 +103,10 @@ TACT_SW[12:0]
 |---|---|
 | `clk_1khz` | PIN_132 |
 | `RESET_N` | PIN_206 |
-| `TACT_SW[0~12]` | PIN_110, 112~116, 101, 104, 103, 105~107, 95 |
+| `gpio_d[0~3]` | PIN_149, 147, 146, 145 |
+| `gpio_valid` | PIN_144 |
+| `gpio_enter` | PIN_143 |
+| `gpio_change` | PIN_142 |
 | `LEDR[0~7]` | PIN_63, 60, 58, 56, 48, 46, 44, 41 |
 
 ---
