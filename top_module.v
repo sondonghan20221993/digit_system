@@ -1,9 +1,14 @@
 module top_module(
     input  wire        clk_1khz,
     input  wire        RESET_N,
-    input  wire [12:0] TACT_SW,
 
-    output wire [15:0] LEDR,        // 16 board LEDs (LED1..LED16)
+    // GPIO keyboard input (Arduino via HDR20)
+    input  wire [3:0]  gpio_d,       // BR1~BR4 : digit bits
+    input  wire        gpio_valid,   // BR5     : digit valid pulse
+    input  wire        gpio_enter,   // BR6     : enter pulse
+    input  wire        gpio_change,  // BR7     : change pulse
+
+    output wire [15:0] LEDR,
     output wire [7:0]  FND_SEG,
     output wire [3:0]  FND_COM,
 
@@ -20,8 +25,10 @@ module top_module(
     wire        change;
     wire        auto_open;
 
-    input_manager #(.CLK_FREQ_HZ(1000), .DEBOUNCE_MS(20)) U_INPUT (
-        .clk(clk_1khz), .reset_n(RESET_N), .tact_sw(TACT_SW),
+    gpio_key_input U_INPUT (
+        .clk(clk_1khz), .reset_n(RESET_N),
+        .gpio_d(gpio_d), .gpio_valid(gpio_valid),
+        .gpio_enter(gpio_enter), .gpio_change(gpio_change),
         .lock(alarm_on),
         .digit_in(digit_in), .key_valid(key_valid),
         .enter(enter), .change(change), .auto_open(auto_open)
